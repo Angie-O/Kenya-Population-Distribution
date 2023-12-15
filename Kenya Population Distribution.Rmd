@@ -1,0 +1,385 @@
+---
+title: "Kenyan Population Distribution"
+output: html_notebook
+---
+
+### About the Data
+The data is from [Kenya National Bureau of Statistics Data Tables](https://www.knbs.or.ke/download/population-households-density-by-county/).
+<p>It is about the Population Distribution of Households by County according to the 2019 Kenya Population and Housing Census.</p>
+It contains the following fields;
+<ul>
+  <li> County
+  <li> Total_Population
+  <li> Male_Population
+  <li> Female_Population
+  <li> Intersex_Population
+  <li> Total_Household
+  <li> Conventional_Household
+  <li> Group_Quarters
+  <li> Land_Area_SqKm
+  <li> Density_Persons_per_SqKm
+</ul>
+
+### Steps Taken
+<ol>
+  <li> Importing Necessary R Packages
+  <li> Loading Data to R
+  <li> Understanding the Data
+  <li> Data Cleaning and Preparation - Missing Values
+  <li> Exploratory Data Analysis - Visualizations
+  <li> Findings
+</ol>
+
+### Importing necessary packages
+```{r}
+library(readxl) # To read excel data into R
+library(tidyverse) # To tidy data
+library(plotly) # To create interactive visualizations
+library(knitr) # For report generation
+library(kableExtra) # To display table
+library(dplyr) # For data analysis
+```
+
+### Load and Preview the Data
+```{r}
+# Load data to a dataFrame
+pop_data <- read_excel("C:/Users/KNBS/Documents/PROJECTS/Education Loans R Shiny/Population-households-density-by-county.xlsx", skip = 4)
+
+# Preview the Data
+head(pop_data)
+```
+
+### Formatting Columns
+Renaming column Headers
+```{r}
+colnames(pop_data) <- c("County", "Total_Population", "Male_Population",
+                        "Female_Population", "Intersex_Population",
+                        "Total_Household", "Conventional_Household",
+                        "Group_Quarters", "Land_Area_SqKm",
+                        "Density_Persons_per_SqKm")
+# Previewing the result
+head(pop_data)
+```
+### Understanding the structure of the Data
+```{r}
+str(pop_data)
+```
+**OBSERVATIONS:**
+<ul>
+<li>There are 10 columns as listed, all in the correct Data Types.
+<li>The data has 48 records.
+<ul>
+
+### Missing Values
+Checking for rows with any null/Missing Values and viewing them
+```{r}
+# Check for NAs in the entire pop_data data frame
+na_rows <- pop_data[apply(is.na(pop_data), 1, any), ]
+
+# View the rows with NAs in any column
+print(na_rows)
+```
+**OBSERVATION:**
+Only one of the rows has missing values. It is the last row that isn't related to the data, so will drop it.
+```{r}
+pop_data <- na.omit(pop_data)
+```
+
+Previewing nulls again to confirm removal of the row
+```{r}
+# Check for nulls in the entire pop_data data frame
+na_rows <- pop_data[apply(is.na(pop_data), 1, any), ]
+
+# View the rows with nulls in any column
+print(na_rows)
+```
+**OBSERVATION:**
+- There's no missing values left.
+
+### Getting Summary statistics of the data fields
+```{r}
+# Summary statistics of the Data's columns
+summary(pop_data)
+```
+
+### Adding an extra column called Regions for better analysis
+```{r}
+# Create 'Region' column based on 'County'
+pop_data$Region <- ifelse(pop_data$County %in% c("MOMBASA", "KWALE", "KILIFI", "TANA RIVER", "LAMU", "TAITA/TAVETA"), "Coast",
+                          ifelse(pop_data$County %in% "NAIROBI CITY", "Nairobi",
+                          ifelse(pop_data$County %in% c("KIAMBU", "MURANG'A", "NYERI", "NYANDARUA", "KIRINYAGA"), "Central", 
+                          ifelse(pop_data$County %in% c("MANDERA", "WAJIR", "GARISSA", "MARSABIT"), "North Eastern",
+                          ifelse(pop_data$County %in% c("TURKANA", "UASIN GISHU", "ELGEYO/MARAKWET", "KERICHO", "WEST POKOT",
+                                                        "SAMBURU", "TRANS NZOIA", "BARINGO", "NANDI", "LAIKIPIA", "NAKURU",
+                                                        "NAROK", "KAJIADO"), "Rift Valley",
+                          ifelse(pop_data$County %in% c("KAKAMEGA", "VIHIGA", "BUNGOMA", "BUSIA"), "Western",
+                          ifelse(pop_data$County %in% c("KISII", "NYAMIRA", "HOMA BAY", "MIGORI", "KISUMU", "SIAYA"), "Nyanza",
+                          ifelse(pop_data$County %in% c("THARAKA-NITHI", "EMBU", "KITUI", "MAKUENI", "MERU", "ISIOLO", "MACHAKOS"), "Eastern",
+                          ifelse(pop_data$County %in% c("KAJIADO", "NAROK", "KERICHO", "BOMET", "NYERI"), "Rift Valley",
+                          "Other")))))))))
+# Reorder columns with 'Region' as the first column
+pop_data <- pop_data %>%
+  select(Region, everything())
+
+# Check the resulting data frame
+head(pop_data)
+```
+
+```{r}
+# Check unique values in the 'Region' column
+unique(pop_data$Region)
+```
+**OBSERVATION**
+<p>All records are represented in the 8 regions listed here</p>
+
+# EXPLORATORY DATA ANALYSIS
+VISUALIZATIONS
+
+### Total Population by Region
+```{r}
+# Bar Plot of Total Population by Region
+plot_ly(data = pop_data,
+        x = ~Region,
+        y = ~Total_Population,
+        type = 'bar',
+        name = 'Total Population',
+        marker = list(color = 'blue')) %>%
+  
+  layout(title = 'Total Population by Region',
+         xaxis = list(title = 'Region'),
+         yaxis = list(title = 'Total Population'))
+```
+**OBSERVATIONS:**
+<ul>
+<li> Rift valley region has the Highest Population.
+<li> North Eastern region has the lowest Population.
+</ul>
+
+### Top 10 Highest County Populations
+```{r}
+#Barplot of Top 10 Highest County Populations
+
+# Order the data by Total_Population in descending order
+Total_Population_desc <- pop_data[order(pop_data$Total_Population, decreasing = TRUE), ]
+
+# Select the top N counties (e.g., top 10)
+top_counties <- head(Total_Population_desc, n = 10)
+
+plot_ly(data = top_counties,
+        x = ~reorder(County, -Total_Population),
+        y = ~Total_Population,
+        type = 'bar',
+        name = 'Total Population',
+        marker = list(color = 'blue')) %>%
+    layout(title = 'Top Highest County Populations',
+         xaxis = list(title = 'County'),
+         yaxis = list(title = 'Total Population'))
+```
+**OBSERVATIONS=:**
+<ul>
+<li> Nairobi County has the Highest Population compared to other counties, followed by Kiambu then Nakuru.
+</ul>
+
+### Bottom 10 (Low) County Populations
+```{r}
+# Barplot of Bottom 10 County Populations
+
+# Order the data by Total_Population in ascending order
+pop_data_sorted <- pop_data[order(pop_data$Total_Population), ]
+
+# Select the top N counties (e.g., bottom 10)
+bottom_counties <- head(pop_data_sorted, n = 10)
+
+# Create the plot with ordered bars in ascending order
+plot_ly(data = bottom_counties,
+        x = ~reorder(County, Total_Population),
+        y = ~Total_Population,
+        type = 'bar',
+        name = 'Total Population',
+        marker = list(color = 'blue')) %>%
+  
+  layout(title = 'Bottom Least County Populations',
+         xaxis = list(title = 'County'),
+         yaxis = list(title = 'Total Population'))
+```
+**OBSERVATION:**
+<ul>
+<li> Lamu County has the Lowest Population compared to other counties, followed by Isiolo then Samburu from the bottom.
+</ul>
+
+### Population by Gender
+```{r}
+# Pie Chart of Male, Female and Intersex Population percentages
+pop_data %>%
+  plot_ly(labels = ~c("Male", "Female", "Intersex"),
+          values = ~c(sum(pop_data$Male_Population), sum(pop_data$Female_Population), sum(pop_data$Intersex_Population)),
+          type = 'pie',
+          marker = list(colors = c("blue", "pink", "red"))) %>%
+  layout(title = "Population Distribution by Gender")
+```
+#### Total Households by Region
+```{r}
+# Bar Plot of Total Population by Region
+
+plot_ly(data = pop_data,
+        x = ~Region,
+        y = ~Total_Household,
+        type = 'bar',
+        name = 'Total Households by Region',
+        marker = list(color = 'blue')) %>%
+    layout(title = 'Total Households by Region',
+         xaxis = list(title = 'Region'),
+         yaxis = list(title = 'Total Households for Region'))
+```
+**OBSERVATION:**
+<ul>
+<li> Rift Valley has the Highest number of Households while North Eastern has the least.
+</ul>
+
+
+### Comparison of Group Quarters and Conventional Household
+```{r}
+# Pie Chart of Male, Female and Intersex Population percentages
+
+pop_data %>%
+  plot_ly(labels = ~c("Conventional_Household", "Group_Quarters"),
+          values = ~c(sum(pop_data$Conventional_Household), sum(pop_data$Group_Quarters)),
+          type = 'pie',
+          marker = list(colors = c("blue", "red"))) %>%
+  layout(title = "Comparison of Group Quarters and Conventional Household")
+```
+**OBSERVATION:**
+<ul>
+<li> Conventional households are more common than Group Quarters.
+</ul>
+
+### Comparison of Group Quarters and Conventional Household by Region
+```{r}
+# Grouped Bar plot showing Comparison of Group Quarters and Conventional Household by Region
+
+plot_ly(data = pop_data,
+        x = ~Region,
+        y = ~Group_Quarters,
+        type = 'bar',
+        name = 'Group Quarters',
+        marker = list(color = 'red')) %>%
+  
+  add_trace(y = ~Conventional_Household,
+            name = 'Conventional Household',
+            marker = list(color = 'blue')) %>%
+  
+  layout(title = 'Comparison of Group Quarters and Conventional Household by Region',
+         xaxis = list(title = 'Region'),
+         yaxis = list(title = 'Count'),
+         barmode = 'group')
+```
+**OBSERVATIONS:**
+<ul>
+<li> All Kenyan Regions have both Conventional Households and Group Quarters
+<li> Conventional Households are more common that Group Quarters
+<li> Rift Valley has the Highest Number of both Conventional Households and Group Quarters
+</ul>
+
+### Household vs. Land Area
+```{r}
+# Scatter Plot of Household vs. Land Area
+
+plot_ly(
+  data = pop_data,
+  x = ~Total_Household,
+  y = ~Land_Area_SqKm,
+  color = ~Region,  # Specify the variable for coloring
+  type = 'scatter',
+  mode = 'markers'
+) %>%
+  layout(
+    title = 'Household vs. Land Area by Region',
+    xaxis = list(title = 'Total Household'),
+    yaxis = list(title = 'Land Area (Sq Km)')
+  )
+```
+**OBSERVATION:**
+<ul>
+<li> Most parts of Kenya have low Land area and low Household numbers.
+</ul>
+
+### Population Density Distribution
+```{r}
+# Histogram of Population Density
+# Calculate density values
+density_values <- density(pop_data$Density_Persons_per_SqKm)
+
+# Create the combined plot
+combined_plot <- plot_ly() %>%
+  add_histogram(x = ~pop_data$Density_Persons_per_SqKm, nbinsx = 20, histnorm = 'probability density', marker = list(color = 'blue', line = list(color = 'black', width = 1))) %>%
+  add_lines(x = density_values$x, y = density_values$y, type = 'scatter', mode = 'lines', line = list(color = 'red', width = 2)) %>%
+  layout(title = 'Population Density Histogram with KDE',
+         xaxis = list(title = 'Density (Persons per Sq Km)'),
+         yaxis = list(title = 'Probability Density'))
+
+# Display the combined plot
+combined_plot
+```
+**OBSERVATION:**
+<ul>
+<li>Most Kenyan areas have relatively low population density with a few exceptions where population density is significantly high.
+</ul>
+
+<p></p>
+
+Narrowing down to comparison in different regions will help gather more insights.
+
+### Population Density by Region
+```{r}
+# Box Plot
+plot_ly(data = pop_data, x = ~Region, y = ~Density_Persons_per_SqKm, type = "box") %>%
+  layout(title = "Population Density by Region",
+         xaxis = list(title = "Region"),
+         yaxis = list(title = "Density (Persons per Sq Km)"))
+```
+**OBSERVATION:**
+<ul>
+<li>Most regions have relatively low density ranging from 0 to slightly above 1000000 persons per square Km but the entire Nairobi Region has very high density. Coast Region has an outlier that has very high population density of 5495008 persons per Sq Km.
+<LI>In most regions, the median is closer to the lower values. This means that most values are in the lower range. This emphasizes the *low population density in most parts of Kenya.*
+</ul>
+
+A table showing density for each county in coast region will help understand the outlier in the region better.
+```{r}
+# filter coast data only
+coast_data <- pop_data[pop_data$Region == "Coast", ]
+
+# Assuming your data frame is named 'pop_data'
+coast_data <- pop_data[pop_data$Region == "Coast", ]
+
+# Create a table of density values
+coast_density_table <- coast_data %>%
+  select(County, Density_Persons_per_SqKm) %>%
+  kable("html", caption = "Density Values for Counties in the Coast Region") %>%
+  kable_styling()
+
+# Display the table
+coast_density_table
+```
+**OBSERVATION:**
+<ul>
+<li> From the coast Region, Mombasa is the outlier with very high density compared to the other areas.
+</ul>
+
+# FINDINGS
+<ul>
+<li> Rift valley region has the Highest Population and highest number of Households.
+<p></p>
+<li> North Eastern region has the lowest Population and lowest number of Households.
+<p></p>
+<li> Most Kenyans identify as male or female. With slightly more females than males. A very small percentage(0.0032%) identify as intersex.
+<p></p>
+<li> Nairobi County has the Highest Population compared to other counties, followed by Kiambu then Nakuru.
+<p></p>
+<li> Lamu County has the Lowest Population compared to other counties, followed by Isiolo then Samburu from the bottom.
+<p></p>
+<li> All Kenyan Regions have both Conventional Households and Group Quarters but Conventional Households are more common that Group Quarters.
+<p></p>
+<li> Most Kenyan counties have relatively low Population Density with an exception of Mombasa and Nairobi which have very High Population Density(Persons per Square Kilometer) compared to the other counties.
+</ul>
+
+
